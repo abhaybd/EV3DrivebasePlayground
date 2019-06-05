@@ -1,17 +1,17 @@
 package com.coolioasjulio.ev3;
 
-import lejos.hardware.motor.EV3LargeRegulatedMotor;
 import trclib.TrcDriveBase;
+import trclib.TrcMotor;
 import trclib.TrcUtil;
 
 public class DifferentialDriveBase extends TrcDriveBase {
-    private EV3LargeRegulatedMotor leftMotor, rightMotor;
+    private TrcMotor leftMotor, rightMotor;
     private double trackWidth;
     private double lastLeftPos, lastRightPos;
     private double inchesPerTick;
     private Double lastTime;
 
-    public DifferentialDriveBase(EV3LargeRegulatedMotor leftMotor, EV3LargeRegulatedMotor rightMotor, double trackWidth, double inchesPerTick) {
+    public DifferentialDriveBase(TrcMotor leftMotor, TrcMotor rightMotor, double trackWidth, double inchesPerTick) {
         this.leftMotor = leftMotor;
         this.rightMotor = rightMotor;
         this.trackWidth = trackWidth;
@@ -69,7 +69,7 @@ public class DifferentialDriveBase extends TrcDriveBase {
         leftPower /= inchesPerTick;
         rightPower /= inchesPerTick;
 
-        leftMotor.setSpeed((float) leftPower);
-        rightMotor.setSpeed((float) rightPower);
+        leftMotor.set((float) leftPower);
+        rightMotor.set((float) rightPower);
     }
 }
