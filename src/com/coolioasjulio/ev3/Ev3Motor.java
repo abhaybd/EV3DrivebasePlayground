@@ -3,10 +3,8 @@ package com.coolioasjulio.ev3;
 import trclib.TrcMotor;
 import trclib.TrcUtil;
 
-import java.io.BufferedReader;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.Arrays;
 
 public class Ev3Motor extends TrcMotor {
     private static byte REPLY = (byte) 0x00;
@@ -50,18 +48,19 @@ public class Ev3Motor extends TrcMotor {
     }
 
     public static void main(String[] args) throws Exception {
-        Ev3Motor motor = new Ev3Motor("a", Port.B);
-        motor.setBrakeModeEnabled(true);
-        motor.setMotorPower(1.0);
-        Thread.sleep(2000);
-        motor.setMotorPower(0.5);
-        Thread.sleep(2000);
-        motor.setMotorPower(-0.5);
-        Thread.sleep(2000);
-        motor.setMotorPower(-1.0);
-        Thread.sleep(2000);
+        Ev3Motor motor = new Ev3Motor("a", Port.C);
+        motor.setBrakeModeEnabled(false);
+        motor.setMotorPower(0.2);
+        Thread t = new Thread(() -> {
+            while(!Thread.interrupted()) {
+                System.out.printf("\r%.0f", motor.getMotorPosition());
+            }
+        });
+        t.start();
+        System.in.read();
+        t.interrupt();
+        t.join();
         motor.setMotorPower(0.0);
-        //System.out.println(motor.getMotorPosition());
     }
 
     private Port port;
@@ -73,11 +72,11 @@ public class Ev3Motor extends TrcMotor {
     public Ev3Motor(String instanceName, Port port) {
         super(instanceName);
         this.port = port;
-        //this.inputType = getInputType();
+        this.inputType = getInputType();
     }
 
     private byte getInputType() {
-        ByteBuffer command = ByteBuffer.allocateDirect(8);
+        ByteBuffer command = ByteBuffer.allocateDirect(6);
         command.put((byte) 0x99);
         command.put((byte) 0x05);
         command.put((byte) 0x00);
@@ -101,9 +100,8 @@ public class Ev3Motor extends TrcMotor {
         command.put((byte) 0x60);
         byte[] arr = Ev3Brick.getDefaultBrick().sendReplyCommand(command, 0, 4);
         ByteBuffer buffer = ByteBuffer.allocateDirect(4);
-        buffer.order(ByteOrder.BIG_ENDIAN);
         buffer.put(arr);
-        return buffer.getInt(0) * (posInverted ? -1 : 1);
+        return Integer.reverseBytes(buffer.getInt(0)) * (posInverted ? -1 : 1);
     }
 
     @Override
@@ -147,6 +145,7 @@ public class Ev3Motor extends TrcMotor {
     @Override
     public void setInverted(boolean b) {
         inverted = b;
+        posInverted = b;
     }
 
     @Override

@@ -12,23 +12,24 @@ public class DifferentialDriveBase extends TrcDriveBase {
     private Double lastTime;
 
     public DifferentialDriveBase(TrcMotor leftMotor, TrcMotor rightMotor, double trackWidth, double inchesPerTick) {
+        super(leftMotor, rightMotor);
         this.leftMotor = leftMotor;
         this.rightMotor = rightMotor;
         this.trackWidth = trackWidth;
         this.inchesPerTick = inchesPerTick;
         this.setPositionScales(1, 1, 1);
+
+        Runtime.getRuntime().addShutdownHook(new Thread(this::stop));
     }
 
     @Override
     protected void updateOdometry(Odometry odometry) {
         double currTime = TrcUtil.getCurrentTime();
+        double leftPos = leftMotor.getMotorPosition();
+        double rightPos = rightMotor.getMotorPosition();
         if (lastTime != null) {
-            double leftPos = leftMotor.getPosition();
-            double rightPos = rightMotor.getPosition();
-            double left = leftPos * inchesPerTick - lastLeftPos;
-            double right = rightPos * inchesPerTick - lastRightPos;
-            lastLeftPos = leftPos;
-            lastRightPos = rightPos;
+            double left = inchesPerTick * (leftPos - lastLeftPos);
+            double right = inchesPerTick * (rightPos - lastRightPos);
 
             double dTheta = (left - right) / trackWidth; // in radians
             double turningRadius = (trackWidth / 2) * (left + right) / (left - right);
@@ -55,21 +56,23 @@ public class DifferentialDriveBase extends TrcDriveBase {
             odometry.gyroHeading += dThetaDeg;
             odometry.gyroTurnRate = dThetaDeg / dt;
         }
+        lastLeftPos = leftPos;
+        lastRightPos = rightPos;
         lastTime = currTime;
     }
 
     @Override
     public void tankDrive(double leftPower, double rightPower, boolean inverted) {
         if (inverted) {
-            double temp = leftPower;
-            leftPower = rightPower;
+            double temp = -leftPower;
+            leftPower = -rightPower;
             rightPower = temp;
         }
 
         leftPower /= inchesPerTick;
         rightPower /= inchesPerTick;
 
-        leftMotor.set((float) leftPower);
-        rightMotor.set((float) rightPower);
+        leftMotor.set(leftPower);
+        rightMotor.set(rightPower);
     }
 }

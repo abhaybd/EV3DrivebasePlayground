@@ -2,37 +2,38 @@ package com.coolioasjulio.ev3;
 
 import javax.microedition.io.Connector;
 import javax.microedition.io.StreamConnection;
+import java.io.Closeable;
 import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.Arrays;
 
-public class Ev3Brick {
+public class Ev3Brick implements Closeable {
     private static Ev3Brick defaultBrick;
-    public static Ev3Brick getDefaultBrick() {
+
+    public static synchronized Ev3Brick getDefaultBrick() {
         if (defaultBrick == null) {
             defaultBrick = new Ev3Brick();
         }
         return defaultBrick;
     }
 
+    private StreamConnection c;
     private DataInputStream in;
     private OutputStream out;
 
     public Ev3Brick() {
         try {
-            StreamConnection c = (StreamConnection) Connector.open("btspp://001653419a21:1");
+            c = (StreamConnection) Connector.open("btspp://001653419a21:1");
             in = c.openDataInputStream();
-            out = c.openDataOutputStream();
+            out = c.openOutputStream();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public void sendCommand(ByteBuffer command, boolean reply, int localMem, int globalMem) {
+    public synchronized void sendCommand(ByteBuffer command, boolean reply, int localMem, int globalMem) {
         byte[] arr = new byte[command.limit()];
         command.rewind().get(arr);
         ByteBuffer buffer = ByteBuffer.wrap(new byte[arr.length + 7]);
@@ -43,11 +44,6 @@ public class Ev3Brick {
         buffer.putShort((short) ((localMem << 10) + (globalMem & 0xfffff))); // memory
         buffer.put(arr);
         try {
-            byte[] barr = buffer.array();
-            for (byte b : barr) {
-                System.out.println(Integer.toHexString(Byte.toUnsignedInt(b)));
-            }
-            System.out.printf("Sending command: %s\n", Arrays.toString(buffer.array()));
             out.write(buffer.array());
             out.flush();
         } catch (IOException e) {
@@ -55,11 +51,11 @@ public class Ev3Brick {
         }
     }
 
-    public void sendNoReplyCommand(ByteBuffer command) {
+    public synchronized void sendNoReplyCommand(ByteBuffer command) {
         sendCommand(command, false, 0, 0);
     }
 
-    public byte[] sendReplyCommand(ByteBuffer command, int localMem, int globalMem) {
+    public synchronized byte[] sendReplyCommand(ByteBuffer command, int localMem, int globalMem) {
         sendCommand(command, true, localMem, globalMem);
         try {
             int len = Short.reverseBytes(in.readShort());
@@ -68,13 +64,20 @@ public class Ev3Brick {
             if (status != 0x02) {
                 //throw new IllegalStateException("Not ok!");
             }
-            System.out.println(in.available());
-            byte[] arr = new byte[len-3];
+            if (len < 0) {
+                System.err.println("Weird len: " + len + " for command: " + command);
+            }
+            byte[] arr = new byte[len - 3];
             in.readFully(arr);
-            System.out.printf("Received response: %s\n", Arrays.toString(arr));
+            //System.out.printf("Received response: %s\n", Arrays.toString(arr));
             return arr;
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    public void close() throws IOException {
+        c.close();
     }
 }
