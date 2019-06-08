@@ -11,6 +11,13 @@ public class DifferentialDriveBase extends TrcDriveBase {
     private double inchesPerTick;
     private Double lastTime;
 
+    private double xPos;
+    private double yPos;
+    private double xVel;
+    private double yVel;
+    private double heading;
+    private double rotVel;
+
     public DifferentialDriveBase(TrcMotor leftMotor, TrcMotor rightMotor, double trackWidth, double inchesPerTick) {
         super(leftMotor, rightMotor);
         this.leftMotor = leftMotor;
@@ -18,10 +25,59 @@ public class DifferentialDriveBase extends TrcDriveBase {
         this.trackWidth = trackWidth;
         this.inchesPerTick = inchesPerTick;
         this.setPositionScales(1, 1, 1);
+
+        new Thread(() -> {
+            while(!Thread.interrupted()) {
+                updateOdometry();
+            }
+        }).start();
     }
 
     @Override
     protected void updateOdometry(Odometry odometry) {
+    }
+
+    @Override
+    public double getRawYPosition() {
+        return yPos;
+    }
+
+    @Override
+    public double getYPosition() {
+        return getRawYPosition();
+    }
+
+    @Override
+    public double getRawXPosition() {
+        return xPos;
+    }
+
+    @Override
+    public double getXPosition() {
+        return getRawXPosition();
+    }
+
+    @Override
+    public double getYVelocity() {
+        return yVel;
+    }
+
+    @Override
+    public double getXVelocity() {
+        return xVel;
+    }
+
+    @Override
+    public double getHeading() {
+        return heading;
+    }
+
+    @Override
+    public double getGyroTurnRate() {
+        return rotVel;
+    }
+
+    private void updateOdometry() {
         double currTime = TrcUtil.getCurrentTime();
         double leftPos = leftMotor.getMotorPosition();
         double rightPos = rightMotor.getMotorPosition();
@@ -40,18 +96,19 @@ public class DifferentialDriveBase extends TrcDriveBase {
                 dy = TrcUtil.average(left, right);
             }
 
-            double headingRad = Math.toRadians(odometry.gyroHeading);
+            double headingRad = Math.toRadians(heading);
             double x = dx * Math.cos(headingRad) + dy * Math.sin(headingRad);
             double y = -dx * Math.sin(headingRad) + dy * Math.cos(headingRad);
-            odometry.xRawPos += x;
-            odometry.yRawPos += y;
+            xPos += x;
+            yPos += y;
 
             double dt = currTime - lastTime;
-            odometry.xRawVel = x / dt;
-            odometry.yRawVel = y / dt;
+            xVel = x / dt;
+            yVel = y / dt;
 
             double dThetaDeg = Math.toDegrees(dTheta);
-            odometry.rotRawPos += dThetaDeg;
+            heading += dThetaDeg;
+            rotVel = dThetaDeg / dt;
         }
         lastLeftPos = leftPos;
         lastRightPos = rightPos;

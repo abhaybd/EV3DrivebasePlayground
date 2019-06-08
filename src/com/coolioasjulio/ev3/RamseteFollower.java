@@ -9,12 +9,14 @@ public class RamseteFollower {
     private TrcTaskMgr.TaskObject driveTask;
     private double b, zeta;
     private double trackWidth;
+    private double topSpeed;
 
-    public RamseteFollower(String instanceName, TrcDriveBase driveBase, double trackWidth, double b, double zeta) {
+    public RamseteFollower(String instanceName, TrcDriveBase driveBase, double trackWidth, double b, double zeta, double topSpeed) {
         this.driveBase = driveBase;
         this.trackWidth = trackWidth;
         this.b = b;
         this.zeta = zeta;
+        this.topSpeed = topSpeed;
         driveTask = TrcTaskMgr.getInstance().createTask(instanceName + ".driveTask", this::driveTask);
     }
 
@@ -35,9 +37,9 @@ public class RamseteFollower {
         double wTerm3 = k(state.targetVel, state.targetRotVel) * headingErr;
         double w = wTerm1 + wTerm2 + wTerm3; // rad/sec
 
-        double leftPower = v - w * trackWidth / 2;
-        double rightPower = v + w * trackWidth / 2;
-        driveBase.tankDrive(leftPower, rightPower);
+        double leftSpeed = v - w * trackWidth / 2;
+        double rightSpeed = v + w * trackWidth / 2;
+        driveBase.tankDrive(leftSpeed / topSpeed, rightSpeed / topSpeed);
     }
 
     /**
