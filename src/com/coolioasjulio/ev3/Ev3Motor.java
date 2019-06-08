@@ -7,12 +7,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 public class Ev3Motor extends TrcMotor {
-    private static byte REPLY = (byte) 0x00;
-    private static byte NO_REPLY = (byte) 0x80;
-
-    private static byte OP_STOP = (byte) 0xa3;
-    private static byte OP_SPEED = (byte) 0xa5;
-    private static byte OP_START = (byte) 0xa6;
 
     private static byte PORT_A = (byte) 0x01;
     private static byte PORT_B = (byte) 0x02;
@@ -28,6 +22,7 @@ public class Ev3Motor extends TrcMotor {
         A(INPUT_PORT_A, PORT_A), B(INPUT_PORT_B, PORT_B), C(INPUT_PORT_C, PORT_C), D(INPUT_PORT_D, PORT_D);
 
         private byte input, output;
+
         Port(byte input, byte output) {
             this.output = output;
             this.input = input;
@@ -50,17 +45,20 @@ public class Ev3Motor extends TrcMotor {
     public static void main(String[] args) throws Exception {
         Ev3Motor motor = new Ev3Motor("a", Port.C);
         motor.setBrakeModeEnabled(false);
+        motor.resetPosition();
+
+        System.out.println(motor.getMotorPosition());
+        motor.setInverted(true);
         motor.setMotorPower(0.2);
-        Thread t = new Thread(() -> {
-            while(!Thread.interrupted()) {
-                System.out.printf("\r%.0f", motor.getMotorPosition());
-            }
-        });
-        t.start();
-        System.in.read();
-        t.interrupt();
-        t.join();
+        Thread.sleep(2000);
         motor.setMotorPower(0.0);
+        System.out.println(motor.getMotorPosition());
+        motor.resetPosition();
+        motor.setInverted(false);
+        motor.setMotorPower(0.2);
+        Thread.sleep(2000);
+        motor.setMotorPower(0.0);
+        System.out.println(motor.getMotorPosition());
     }
 
     private Port port;
@@ -69,6 +67,7 @@ public class Ev3Motor extends TrcMotor {
     private double power = 0;
     private boolean brakeMode = false;
     private byte inputType;
+
     public Ev3Motor(String instanceName, Port port) {
         super(instanceName);
         this.port = port;
@@ -106,7 +105,11 @@ public class Ev3Motor extends TrcMotor {
 
     @Override
     public void resetPosition(boolean b) {
-
+        ByteBuffer command = ByteBuffer.allocateDirect(3);
+        command.put((byte) 0xb2);
+        command.put((byte) 0x00);
+        command.put(port.getOutput());
+        Ev3Brick.getDefaultBrick().sendNoReplyCommand(command);
     }
 
     @Override
@@ -128,11 +131,7 @@ public class Ev3Motor extends TrcMotor {
             command.put(port.getOutput());
             Ev3Brick.getDefaultBrick().sendNoReplyCommand(command);
         } else {
-            ByteBuffer command = ByteBuffer.allocateDirect(4);
-            command.put((byte) 0xa3);
-            command.put((byte) 0x00);
-            command.put(port.getOutput());
-            command.put((byte) (brakeMode ? 0x01 : 0x00));
+            ByteBuffer command = createBuffer((byte) 0xa3, (byte) 0x00, port.getOutput(), (byte) (brakeMode ? 0x01 : 0x00));
             Ev3Brick.getDefaultBrick().sendReplyCommand(command, 0, 0);
         }
     }
@@ -146,6 +145,10 @@ public class Ev3Motor extends TrcMotor {
     public void setInverted(boolean b) {
         inverted = b;
         posInverted = b;
+    }
+
+    private ByteBuffer createBuffer(byte... bytes) {
+        return ByteBuffer.wrap(bytes);
     }
 
     @Override

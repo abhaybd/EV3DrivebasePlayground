@@ -9,6 +9,10 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
+/**
+ * Use this as reference:
+ * https://le-www-live-s.legocdn.com/sc/media/files/ev3-developer-kit/lego%20mindstorms%20ev3%20firmware%20developer%20kit-7be073548547d99f7df59ddfd57c0088.pdf?la=en-us
+ */
 public class Ev3Brick implements Closeable {
     private static Ev3Brick defaultBrick;
 
@@ -31,9 +35,32 @@ public class Ev3Brick implements Closeable {
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            System.out.println("Shutting down!");
+            for (Ev3Motor.Port port : Ev3Motor.Port.values()) {
+                new Ev3Motor("motor", port).setMotorPower(0.0);
+            }
+            try {
+                close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }));
     }
 
     public synchronized void sendCommand(ByteBuffer command, boolean reply, int localMem, int globalMem) {
+        /*
+        Commands are LITTLE ENDIAN
+        A command consists of:
+        (short) length of rest of command)
+        (short) message counter, unused
+        (byte) command type (0x00 for reply, 0x80 for no reply)
+        (short) memory. First 6 bits are local, last 10 are global (in big endian)
+        The rest of the command.
+        (byte) opcode
+        Arguments
+         */
         byte[] arr = new byte[command.limit()];
         command.rewind().get(arr);
         ByteBuffer buffer = ByteBuffer.wrap(new byte[arr.length + 7]);

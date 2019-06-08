@@ -18,8 +18,6 @@ public class DifferentialDriveBase extends TrcDriveBase {
         this.trackWidth = trackWidth;
         this.inchesPerTick = inchesPerTick;
         this.setPositionScales(1, 1, 1);
-
-        Runtime.getRuntime().addShutdownHook(new Thread(this::stop));
     }
 
     @Override
@@ -53,8 +51,7 @@ public class DifferentialDriveBase extends TrcDriveBase {
             odometry.yRawVel = y / dt;
 
             double dThetaDeg = Math.toDegrees(dTheta);
-            odometry.gyroHeading += dThetaDeg;
-            odometry.gyroTurnRate = dThetaDeg / dt;
+            odometry.rotRawPos += dThetaDeg;
         }
         lastLeftPos = leftPos;
         lastRightPos = rightPos;
@@ -68,9 +65,6 @@ public class DifferentialDriveBase extends TrcDriveBase {
             leftPower = -rightPower;
             rightPower = temp;
         }
-
-        leftPower /= inchesPerTick;
-        rightPower /= inchesPerTick;
 
         leftMotor.set(leftPower);
         rightMotor.set(rightPower);
