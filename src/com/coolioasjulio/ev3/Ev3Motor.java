@@ -114,6 +114,7 @@ public class Ev3Motor extends TrcMotor {
 
     @Override
     public void setMotorPower(double v) {
+        v = TrcUtil.clipRange(v);
         this.power = v;
         if (inverted) {
             v = -v;

@@ -62,7 +62,8 @@ public class Ev3Brick implements Closeable {
         Arguments
          */
         byte[] arr = new byte[command.limit()];
-        command.rewind().get(arr);
+        command.rewind();
+        command.get(arr);
         ByteBuffer buffer = ByteBuffer.wrap(new byte[arr.length + 7]);
         buffer.order(ByteOrder.LITTLE_ENDIAN);
         buffer.putShort((short) (arr.length + 5));

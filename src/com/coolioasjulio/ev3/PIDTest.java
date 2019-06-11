@@ -1,10 +1,7 @@
 package com.coolioasjulio.ev3;
 
-import trclib.TrcEvent;
 import trclib.TrcPidController;
-import trclib.TrcPidDrive;
 import trclib.TrcRobot;
-import trclib.TrcStopwatch;
 import trclib.TrcTaskMgr;
 import trclib.TrcUtil;
 
