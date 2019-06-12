@@ -125,7 +125,9 @@ public class RamseteFollower {
 
             double leftSpeed = v - w * trackWidth / 2;
             double rightSpeed = v + w * trackWidth / 2;
-            System.out.printf("%.3f - x=%.2f,y=%.2f,rot=%.2f - v=%.2f, w=%.2f\n", stopwatch.getElapsedTime(), state.x, state.y, state.heading, v, w);
+            System.out.printf("%.3f - [x=%.2f,y=%.2f,rot=%.2f - v=%.2f, w=%.2f] - Target: [x=%.2f,y=%.2f,rot=%.2f - v=%.2f, w=%.2f]\n",
+                    stopwatch.getElapsedTime(), state.x, state.y, state.heading, state.vel, state.rotVel,
+                    state.targetX, state.targetY, state.targetHeading, state.targetVel, state.targetRotVel);
             driveBase.tankDrive(leftSpeed / topSpeed, rightSpeed / topSpeed);
         }
     }
@@ -171,6 +173,7 @@ public class RamseteFollower {
                     weight = t / dt;
                     prev = path.getWaypoint(i);
                     point = path.getWaypoint(i + 1);
+                    break;
                 }
             }
             if (prev == null || point == null) {
