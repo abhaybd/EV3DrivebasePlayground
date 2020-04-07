@@ -4,12 +4,19 @@ import trclib.TrcDriveBase;
 import trclib.TrcMotor;
 import trclib.TrcUtil;
 
+import java.util.LinkedList;
+import java.util.Queue;
+
 public class DifferentialDriveBase extends TrcDriveBase {
+
+    private static final int ROT_VEL_SMOOTH_WINDOW = 6;
+
     private TrcMotor leftMotor, rightMotor;
     private double trackWidth;
     private double lastLeftPos, lastRightPos;
     private double inchesPerTick;
     private Double lastTime;
+    private Queue<double[]> headingQueue;
 
     private double xPos;
     private double yPos;
@@ -26,11 +33,36 @@ public class DifferentialDriveBase extends TrcDriveBase {
         this.inchesPerTick = inchesPerTick;
         this.setPositionScales(1, 1, 1);
 
+        headingQueue = new LinkedList<>();
+
         new Thread(() -> {
-            while(!Thread.interrupted()) {
+            while (!Thread.interrupted()) {
                 updateOdometry();
+                try {
+                    Thread.sleep(10);
+                } catch (InterruptedException e) {
+                    break;
+                }
             }
         }).start();
+    }
+
+    @Override
+    public void resetOdometry(boolean hardware, boolean resetHeading) {
+        if (leftMotor != null) {
+            leftMotor.resetPosition(hardware);
+        }
+        if (rightMotor != null) {
+            rightMotor.resetPosition(hardware);
+        }
+        xPos = 0.0;
+        yPos = 0.0;
+        xVel = 0.0;
+        yVel = 0.0;
+        if (resetHeading) {
+            heading = 0.0;
+        }
+        rotVel = 0.0;
     }
 
     @Override
@@ -85,7 +117,7 @@ public class DifferentialDriveBase extends TrcDriveBase {
             double left = inchesPerTick * (leftPos - lastLeftPos);
             double right = inchesPerTick * (rightPos - lastRightPos);
 
-            double dTheta = (left - right) / trackWidth; // in radians
+            double dTheta = 0; //(left - right) / trackWidth; // in radians
             double turningRadius = (trackWidth / 2) * (left + right) / (left - right);
             double dx, dy;
             if (Double.isFinite(turningRadius)) {
@@ -108,7 +140,16 @@ public class DifferentialDriveBase extends TrcDriveBase {
 
             double dThetaDeg = Math.toDegrees(dTheta);
             heading += dThetaDeg;
-            rotVel = dThetaDeg / dt;
+            headingQueue.add(new double[]{currTime, heading});
+            while (headingQueue.size() > ROT_VEL_SMOOTH_WINDOW) {
+                headingQueue.remove();
+            }
+            if (headingQueue.size() == ROT_VEL_SMOOTH_WINDOW) {
+                double[] prevHeading = headingQueue.remove();
+                rotVel = (heading - prevHeading[1]) / (currTime - prevHeading[0]);
+            } else {
+                rotVel = 0;
+            }
         }
         lastLeftPos = leftPos;
         lastRightPos = rightPos;

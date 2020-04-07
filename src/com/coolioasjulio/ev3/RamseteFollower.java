@@ -220,6 +220,7 @@ public class RamseteFollower {
     }
 
     private double interpolate(double start, double end, double weight) {
+        weight = TrcUtil.clipRange(weight, 0.0, 1.0);
         return (1.0 - weight) * start + weight * end;
     }
 
